@@ -1,0 +1,32 @@
+{
+  "name": "server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsdown",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.11.0",
+    "@hono/clerk-auth": "^3.1.1",
+    "@hono/node-server": "^2.0.8",
+    "@repo/auth": "workspace:*",
+    "@repo/db": "workspace:*",
+    "@repo/shared": "workspace:*",
+    "hono": "^4.12.28"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/node": "^26.1.0",
+    "tsdown": "^0.22.3",
+    "tsx": "^4.23.0",
+    "vitest": "^4.1.10"
+  }
+}

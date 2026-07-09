@@ -1,0 +1,29 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "db:migrate": "tsx src/migrate.ts up",
+    "db:migrate:down": "tsx src/migrate.ts down",
+    "db:seed": "tsx src/seed.ts",
+    "codegen": "kysely-codegen --out-file src/types.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/shared": "workspace:*",
+    "kysely": "^0.29.3",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/node": "^26.1.0",
+    "@types/pg": "^8.20.0",
+    "kysely-codegen": "^0.20.0",
+    "tsx": "^4.23.0"
+  }
+}

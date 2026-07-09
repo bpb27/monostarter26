@@ -1,0 +1,16 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# Pin a single React version across the workspace so the mobile (React Native)
+# app never ends up with duplicate native React copies. Matches Expo SDK 57.
+overrides:
+  react: 19.2.3
+  react-dom: 19.2.3
+allowBuilds:
+  '@clerk/shared': true
+  browser-tabs-lock: true
+  bufferutil: true
+  core-js: true
+  esbuild: true
+  unrs-resolver: true
+  utf-8-validate: true
