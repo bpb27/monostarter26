@@ -1,4 +1,4 @@
-import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
+import { clerkMiddleware, getAuth } from "@clerk/hono";
 import { createDb, type Kysely, type Database } from "@repo/db";
 import { Hono } from "hono";
 import { cors } from "hono/cors";

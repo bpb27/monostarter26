@@ -11,6 +11,7 @@ allowBuilds:
   browser-tabs-lock: true
   bufferutil: true
   core-js: true
+  dtrace-provider: false
   esbuild: true
   unrs-resolver: true
   utf-8-validate: true
