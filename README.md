@@ -70,8 +70,11 @@ Target a single package with `--filter`, e.g. `pnpm --filter server dev`.
 ## Deployment
 
 - **Web apps + server**: three Vercel projects, each with its **Root Directory**
-  set to `apps/web-user`, `apps/web-admin`, or `apps/server`. Each ships a
-  `vercel.json` (SPA rewrites for the web apps; a catch-all to the Hono function
-  for the server).
+  set to `apps/web-user`, `apps/web-admin`, or `apps/server`.
+  - The web apps ship a `vercel.json` with an SPA rewrite (`/(.*)` → `/index.html`).
+  - The **server is zero-config**: Vercel detects the default-exported Hono app
+    in `apps/server/src/app.ts` and turns its routes into Vercel Functions (no
+    Dockerfile, no `hono/vercel` handle, no `vercel.json`). Node runs on Vercel's
+    latest supported LTS (24.x) — not the local mise pin (26).
 - **Mobile**: EAS (`eas build` / `eas submit`) — see `apps/mobile/eas.json`.
 - **Database**: Supabase Postgres; set `DATABASE_URL` in each Vercel project.
