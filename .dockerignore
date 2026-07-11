@@ -3,7 +3,6 @@
 **/build
 **/.turbo
 **/.expo
-**/.vercel
 **/.git
 **/.env
 **/.env.*

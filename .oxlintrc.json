@@ -4,7 +4,6 @@
     "**/dist/**",
     "**/build/**",
     "**/.expo/**",
-    "**/.vercel/**",
     "**/node_modules/**",
     "**/scripts/reset-project.js"
   ],

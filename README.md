@@ -80,7 +80,8 @@ for step-by-step Railway setup.
 - **Database**: **Railway Postgres**. Wire it to the server with
   `DATABASE_URL = ${{Postgres.DATABASE_URL}}` (private network). SSL is enabled
   only when the URL has `sslmode=require` or `DATABASE_SSL=true`.
-- **Web apps**: static SPAs — host on Railway (static container) or a CDN
-  (Cloudflare Pages / Netlify). Each ships a `vercel.json` SPA rewrite that's
-  only relevant if deployed to Vercel-style hosting.
+- **Web apps**: static SPAs served by **Caddy** containers on Railway
+  (`apps/web-*/Dockerfile` + `Caddyfile`, with SPA fallback to `index.html`).
+  `VITE_API_URL` uses the `${{server.RAILWAY_PUBLIC_DOMAIN}}` reference so each
+  environment points at its own server.
 - **Mobile**: EAS (`eas build` / `eas submit`) — see `apps/mobile/eas.json`.

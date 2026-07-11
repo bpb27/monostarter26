@@ -39,9 +39,3 @@ export const app = new Hono()
   });
 
 export type AppType = typeof app;
-
-// Vercel deploys Hono with zero config: it detects this default-exported app
-// (at src/app.ts) and turns the routes into Vercel Functions. No `hono/vercel`
-// handle, no api/ dir, no vercel.json rewrite needed. Local self-hosting uses
-// src/index.ts instead.
-export default app;
