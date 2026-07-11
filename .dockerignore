@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/build
+**/.turbo
+**/.expo
+**/.vercel
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/.DS_Store
+apps/mobile/ios
+apps/mobile/android

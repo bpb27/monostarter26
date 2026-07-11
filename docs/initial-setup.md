@@ -51,17 +51,20 @@ Verify: `vp --version`.
 
 ## 3. Install Docker Desktop
 
-Used for the local Postgres instance that mirrors Supabase.
-Download from <https://www.docker.com/products/docker-desktop/> and start it.
+Used to build the server image and to run the local Postgres that mirrors the
+production (Railway) database. Download from
+<https://www.docker.com/products/docker-desktop/> and start it.
 
 ## 4. Create accounts / projects
 
 | Service | Why | What to grab |
 | --- | --- | --- |
-| [Supabase](https://supabase.com) | Hosted Postgres (staging/prod) | Project connection string (`DATABASE_URL`) |
+| [Railway](https://railway.com) | Hosts the **server** (long-running container) + **Postgres** | Link the repo; add a Postgres service |
 | [Clerk](https://clerk.com) | Auth for web + mobile | Publishable key + Secret key |
-| [Vercel](https://vercel.com) | Hosting for web apps + server | Account (link repo later) |
 | [Expo / EAS](https://expo.dev) | Mobile builds | Account + `eas login` |
+
+Web apps (`web-user`/`web-admin`) are static SPAs — host on Railway or a CDN
+(Cloudflare Pages / Netlify). Mobile ships via EAS, not Railway.
 
 ## 5. Environment variables
 
@@ -69,7 +72,7 @@ Copy each app's `.env.example` to `.env` (or `.env.local`) and fill in values.
 
 | Variable | Used by | Source |
 | --- | --- | --- |
-| `DATABASE_URL` | server, `@repo/db` | Local: docker-compose (see below). Prod: Supabase |
+| `DATABASE_URL` | server, `@repo/db` | Local: docker-compose (see below). Prod: Railway Postgres — `${{Postgres.DATABASE_URL}}` |
 | `CLERK_SECRET_KEY` | server | Clerk dashboard |
 | `CLERK_PUBLISHABLE_KEY` | server | Clerk dashboard |
 | `VITE_CLERK_PUBLISHABLE_KEY` | web-user, web-admin | Clerk dashboard |
@@ -95,3 +98,26 @@ docker compose up -d    # local Postgres
 pnpm db:migrate         # apply schema
 pnpm dev                # run everything via turbo
 ```
+
+## 7. Deploy the server to Railway
+
+The server runs as a long-running container from `apps/server/Dockerfile`.
+
+1. **Postgres**: in your Railway project, New → Database → **PostgreSQL**.
+2. **Server service** (from the linked repo) settings:
+   - Root Directory: `/` (repo root — the Docker build needs the workspace)
+   - Config-as-code: point to `apps/server/railway.json` (sets Dockerfile + healthcheck), or set Builder = Dockerfile, Dockerfile Path = `apps/server/Dockerfile`, Healthcheck = `/health` manually.
+3. **Server variables**:
+   ```
+   DATABASE_URL          = ${{Postgres.DATABASE_URL}}   # private network, no TLS
+   CLERK_SECRET_KEY      = sk_live_… (or sk_test_)
+   CLERK_PUBLISHABLE_KEY = pk_live_… (or pk_test_)
+   ```
+   `PORT` is injected by Railway — do not set it.
+4. **Run migrations** once against the new DB (from your machine, using the
+   Postgres service's **public** URL):
+   ```bash
+   DATABASE_URL='<Postgres DATABASE_PUBLIC_URL>' DATABASE_SSL=true \
+     pnpm --filter @repo/db db:migrate
+   ```
+5. Point the web apps' `VITE_API_URL` at the server's Railway domain.

@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/app.ts"
   },
+  "files": ["dist"],
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
     "build": "tsdown",
@@ -19,7 +20,10 @@
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/shared": "workspace:*",
-    "hono": "^4.12.28"
+    "hono": "^4.12.28",
+    "kysely": "^0.29.3",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",

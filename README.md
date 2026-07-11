@@ -11,10 +11,10 @@ A TypeScript monorepo: mobile app, user web app, admin web app, and an API serve
 | Mobile | Expo (SDK 57) + expo-router |
 | Web (user + admin) | React 19 + Vite SPA + React Router |
 | Frontend toolchain | Vite+ (`vp`) — scoped to lint/format/test/build |
-| Server | Hono on Node (Vercel Functions in prod) |
-| Database | Postgres (Supabase in prod) + Kysely |
+| Server | Hono on Node (long-running container on Railway) |
+| Database | Postgres (Railway) + Kysely |
 | Auth | Clerk |
-| Hosting | Vercel (web + server), EAS (mobile) |
+| Hosting | Railway (server + Postgres), EAS (mobile); web = Railway or a CDN |
 
 ## Layout
 
@@ -69,12 +69,18 @@ Target a single package with `--filter`, e.g. `pnpm --filter server dev`.
 
 ## Deployment
 
-- **Web apps + server**: three Vercel projects, each with its **Root Directory**
-  set to `apps/web-user`, `apps/web-admin`, or `apps/server`.
-  - The web apps ship a `vercel.json` with an SPA rewrite (`/(.*)` → `/index.html`).
-  - The **server is zero-config**: Vercel detects the default-exported Hono app
-    in `apps/server/src/app.ts` and turns its routes into Vercel Functions (no
-    Dockerfile, no `hono/vercel` handle, no `vercel.json`). Node runs on Vercel's
-    latest supported LTS (24.x) — not the local mise pin (26).
+See [docs/initial-setup.md](docs/initial-setup.md#7-deploy-the-server-to-railway)
+for step-by-step Railway setup.
+
+- **Server**: a long-running container built from `apps/server/Dockerfile`
+  (multi-stage `node:26-alpine`; the build **bundles** the `@repo/*` workspace
+  packages so the runtime needs no TypeScript). Deployed on **Railway**;
+  config-as-code in `apps/server/railway.json` (Dockerfile builder + `/health`
+  healthcheck). Railway injects `PORT`; the app binds `0.0.0.0:$PORT`.
+- **Database**: **Railway Postgres**. Wire it to the server with
+  `DATABASE_URL = ${{Postgres.DATABASE_URL}}` (private network). SSL is enabled
+  only when the URL has `sslmode=require` or `DATABASE_SSL=true`.
+- **Web apps**: static SPAs — host on Railway (static container) or a CDN
+  (Cloudflare Pages / Netlify). Each ships a `vercel.json` SPA rewrite that's
+  only relevant if deployed to Vercel-style hosting.
 - **Mobile**: EAS (`eas build` / `eas submit`) — see `apps/mobile/eas.json`.
-- **Database**: Supabase Postgres; set `DATABASE_URL` in each Vercel project.

@@ -7,8 +7,11 @@ import type { Database } from "./types";
  * env schema — a migration only needs a connection string.
  *
  * Supabase is just Postgres, so the same `pg` dialect covers local and cloud;
- * the only difference is TLS. Local (localhost) connects plaintext; anything
- * remote (Supabase) gets SSL. Explicit `connectionString` wins, otherwise we
+ * the only difference is TLS. SSL is enabled when the connection string asks
+ * for it (`sslmode=require`, e.g. Supabase) or `DATABASE_SSL=true` is set —
+ * otherwise plaintext. That keeps local Docker and Railway's *internal*
+ * Postgres (private network, no TLS) working while still securing Supabase and
+ * any public/remote connection. Explicit `connectionString` wins; otherwise we
  * accept the Supabase/Vercel integration's variable names too.
  */
 export function createDb(connectionString?: string): Kysely<Database> {
@@ -20,12 +23,13 @@ export function createDb(connectionString?: string): Kysely<Database> {
   if (!url) {
     throw new Error("DATABASE_URL is not set");
   }
-  const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+  const needsSsl =
+    /sslmode=require/i.test(url) || process.env.DATABASE_SSL === "true";
   return new Kysely<Database>({
     dialect: new PostgresDialect({
       pool: new Pool({
         connectionString: url,
-        ssl: isLocal ? undefined : { rejectUnauthorized: false },
+        ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
       }),
     }),
   });
