@@ -4,9 +4,15 @@
   "globalDependencies": [".env", "tsconfig.json"],
   "globalEnv": [
     "NODE_ENV",
+    "PORT",
     "DATABASE_URL",
     "CLERK_SECRET_KEY",
-    "CLERK_PUBLISHABLE_KEY"
+    "CLERK_PUBLISHABLE_KEY",
+    "CORS_ORIGINS",
+    "VITE_CLERK_PUBLISHABLE_KEY",
+    "VITE_API_URL",
+    "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY",
+    "EXPO_PUBLIC_API_URL"
   ],
   "tasks": {
     "build": {

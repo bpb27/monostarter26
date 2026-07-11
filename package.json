@@ -10,7 +10,9 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "db:migrate": "pnpm --filter @repo/db db:migrate",
-    "db:codegen": "pnpm --filter @repo/db codegen"
+    "db:codegen": "pnpm --filter @repo/db codegen",
+    "env:sync": "pnpm --filter @repo/env sync",
+    "env:example": "pnpm --filter @repo/env sync:example"
   },
   "devDependencies": {
     "eas-cli": "latest",

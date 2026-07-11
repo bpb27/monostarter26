@@ -68,17 +68,33 @@ Web apps (`web-user`/`web-admin`) are static SPAs — host on Railway or a CDN
 
 ## 5. Environment variables
 
-Copy each app's `.env.example` to `.env` (or `.env.local`) and fill in values.
+Local dev uses a **single root `.env`** with canonical (unprefixed) values.
+`pnpm env:sync` fans those out into gitignored, correctly-prefixed per-app
+`.env` files — so one Clerk key lives in one place instead of being copied
+across four files under three prefixes.
 
-| Variable | Used by | Source |
+```bash
+cp .env.example .env      # fill in your Clerk keys, etc.
+pnpm env:sync             # writes apps/*/.env from the root .env
+```
+
+Canonical keys in the root `.env`:
+
+| Canonical key | Fans out to | Source |
 | --- | --- | --- |
-| `DATABASE_URL` | server, `@repo/db` | Local: docker-compose (see below). Prod: Railway Postgres — `${{Postgres.DATABASE_URL}}` |
-| `CLERK_SECRET_KEY` | server | Clerk dashboard |
-| `CLERK_PUBLISHABLE_KEY` | server | Clerk dashboard |
-| `VITE_CLERK_PUBLISHABLE_KEY` | web-user, web-admin | Clerk dashboard |
-| `VITE_API_URL` | web-user, web-admin | Local: `http://localhost:8787` |
-| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | mobile | Clerk dashboard |
-| `EXPO_PUBLIC_API_URL` | mobile | Local: your machine LAN IP + port |
+| `DATABASE_URL` | server `DATABASE_URL` | Local: docker-compose (below). Prod: Railway `${{Postgres.DATABASE_URL}}` |
+| `CLERK_SECRET_KEY` | server `CLERK_SECRET_KEY` | Clerk dashboard |
+| `CLERK_PUBLISHABLE_KEY` | server + `VITE_*` + `EXPO_PUBLIC_*` | Clerk dashboard |
+| `API_URL` | `VITE_API_URL` + `EXPO_PUBLIC_API_URL` | Local: `http://localhost:8787` (mobile on device: LAN IP) |
+| `PORT` | server `PORT` | Local: `8787` |
+
+The mapping (canonical → prefixed name, per app) is defined once in
+[`packages/env/src/manifest.ts`](../packages/env/src/manifest.ts) — the single
+source of truth that also drives runtime validation (`@repo/env/{server,web,
+mobile}`) and a CI drift check (`packages/env/src/drift.test.ts`) that fails if a
+var is missing from `.env.example`, `turbo.json`, or a web Dockerfile. To add a
+var: edit the manifest, then run `pnpm env:example` to regenerate the committed
+`.env.example` files.
 
 Local Postgres (matches `docker-compose.yml`):
 
@@ -94,6 +110,8 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5433/monostarter
 ```bash
 mise install            # toolchain
 pnpm install            # workspace deps
+cp .env.example .env    # then fill in Clerk keys, etc.
+pnpm env:sync           # fan the root .env out to per-app .env files
 docker compose up -d    # local Postgres
 pnpm db:migrate         # apply schema
 pnpm dev                # run everything via turbo
@@ -114,8 +132,12 @@ Docker builds need the whole workspace) and point Config-as-code at the service'
 DATABASE_URL          = ${{Postgres.DATABASE_URL}}   # private network, no TLS
 CLERK_SECRET_KEY      = sk_live_… (or sk_test_)
 CLERK_PUBLISHABLE_KEY = pk_live_… (or pk_test_)
+CORS_ORIGINS          = https://${{web-user.RAILWAY_PUBLIC_DOMAIN}},https://${{web-admin.RAILWAY_PUBLIC_DOMAIN}}
 ```
-`PORT` is injected by Railway — do not set it. Migrations run **automatically**
+`PORT` is injected by Railway — do not set it. `CORS_ORIGINS` is the browser
+allowlist (comma-separated); the references resolve per environment so each
+server only accepts its own web apps. Locally it defaults to the Vite dev
+servers, so you don't need to set it for `pnpm dev`. Migrations run **automatically**
 before each deploy via the `preDeployCommand` (`node dist/migrate.mjs`) in
 `apps/server/railway.json`, so a fresh DB is provisioned with no manual step.
 

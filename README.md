@@ -26,7 +26,8 @@ apps/
   server/      Hono API
 packages/
   tsconfig/    shared TS configs
-  shared/      shared types + zod env schema
+  shared/      shared, isomorphic types
+  env/         env manifest (per-app schemas) + getters + `env:sync` generator
   db/          Kysely client, migrations, seed
   auth/        Clerk role helpers
   api-client/  typed Hono RPC client (shared by all frontends)
@@ -39,6 +40,8 @@ See [docs/initial-setup.md](docs/initial-setup.md) for one-time manual setup
 
 ```bash
 pnpm install
+cp .env.example .env      # fill in Clerk keys, etc.
+pnpm env:sync             # fan the root .env out to per-app .env files
 docker compose up -d      # local Postgres
 pnpm db:migrate           # apply schema
 pnpm dev                  # run everything via turbo
@@ -55,6 +58,8 @@ pnpm dev                  # run everything via turbo
 | `pnpm test` | Run tests |
 | `pnpm db:migrate` | Apply DB migrations |
 | `pnpm db:codegen` | Regenerate Kysely types from the DB |
+| `pnpm env:sync` | Regenerate per-app `.env` from the root `.env` |
+| `pnpm env:example` | Regenerate committed `.env.example` files from the manifest |
 
 Target a single package with `--filter`, e.g. `pnpm --filter server dev`.
 

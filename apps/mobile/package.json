@@ -6,6 +6,7 @@
     "@clerk/clerk-expo": "^2.19.31",
     "@expo/ui": "~57.0.4",
     "@repo/api-client": "workspace:*",
+    "@repo/env": "workspace:*",
     "@repo/shared": "workspace:*",
     "expo": "~57.0.4",
     "expo-auth-session": "~57.0.2",

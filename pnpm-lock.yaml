@@ -33,6 +33,9 @@ importers:
       '@repo/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@repo/env':
+        specifier: workspace:*
+        version: link:../../packages/env
       '@repo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -133,9 +136,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@repo/shared':
+      '@repo/env':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: link:../../packages/env
       hono:
         specifier: ^4.12.28
         version: 4.12.28
@@ -176,6 +179,9 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@repo/env':
+        specifier: workspace:*
+        version: link:../../packages/env
       '@repo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -225,6 +231,9 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@repo/env':
+        specifier: workspace:*
+        version: link:../../packages/env
       '@repo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -314,7 +323,7 @@ importers:
         specifier: ^4.23.0
         version: 4.23.0
 
-  packages/shared:
+  packages/env:
     dependencies:
       zod:
         specifier: ^4.4.3
@@ -326,6 +335,18 @@ importers:
       '@types/node':
         specifier: ^26.1.0
         version: 26.1.0
+      tsx:
+        specifier: ^4.23.0
+        version: 4.23.0
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.0)(vite@8.1.3(@types/node@26.1.0)(esbuild@0.28.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
+
+  packages/shared:
+    devDependencies:
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
 
   packages/tsconfig: {}
 
