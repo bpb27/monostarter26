@@ -99,25 +99,40 @@ pnpm db:migrate         # apply schema
 pnpm dev                # run everything via turbo
 ```
 
-## 7. Deploy the server to Railway
+## 7. Deploy to Railway
 
-The server runs as a long-running container from `apps/server/Dockerfile`.
+Everything runs on Railway: the server + both web apps as containers, plus a
+managed Postgres. Each service has a `railway.json` (Dockerfile builder +
+healthcheck). Set every service's **Root Directory to `/`** (repo root — the
+Docker builds need the whole workspace) and point Config-as-code at the service's
+`apps/<name>/railway.json`.
 
-1. **Postgres**: in your Railway project, New → Database → **PostgreSQL**.
-2. **Server service** (from the linked repo) settings:
-   - Root Directory: `/` (repo root — the Docker build needs the workspace)
-   - Config-as-code: point to `apps/server/railway.json` (sets Dockerfile + healthcheck), or set Builder = Dockerfile, Dockerfile Path = `apps/server/Dockerfile`, Healthcheck = `/health` manually.
-3. **Server variables**:
-   ```
-   DATABASE_URL          = ${{Postgres.DATABASE_URL}}   # private network, no TLS
-   CLERK_SECRET_KEY      = sk_live_… (or sk_test_)
-   CLERK_PUBLISHABLE_KEY = pk_live_… (or pk_test_)
-   ```
-   `PORT` is injected by Railway — do not set it.
-4. **Run migrations** once against the new DB (from your machine, using the
-   Postgres service's **public** URL):
-   ```bash
-   DATABASE_URL='<Postgres DATABASE_PUBLIC_URL>' DATABASE_SSL=true \
-     pnpm --filter @repo/db db:migrate
-   ```
-5. Point the web apps' `VITE_API_URL` at the server's Railway domain.
+**1. Postgres** — New → Database → **PostgreSQL**.
+
+**2. `server`** (from the linked repo):
+```
+DATABASE_URL          = ${{Postgres.DATABASE_URL}}   # private network, no TLS
+CLERK_SECRET_KEY      = sk_live_… (or sk_test_)
+CLERK_PUBLISHABLE_KEY = pk_live_… (or pk_test_)
+```
+`PORT` is injected by Railway — do not set it. Migrations run **automatically**
+before each deploy via the `preDeployCommand` (`node dist/migrate.mjs`) in
+`apps/server/railway.json`, so a fresh DB is provisioned with no manual step.
+
+**3. `web-user` and `web-admin`** — build variables (Vite bakes these in):
+```
+VITE_CLERK_PUBLISHABLE_KEY = pk_live_… (or pk_test_)
+VITE_API_URL               = https://${{server.RAILWAY_PUBLIC_DOMAIN}}
+```
+The `${{server.RAILWAY_PUBLIC_DOMAIN}}` **reference** resolves per environment —
+so each app points at the server *in its own environment* (prod or PR preview).
+
+**4. Preview environments** — enable **PR Environments** in project settings.
+Each PR spins up an isolated copy of every service + a fresh Postgres; the
+reference variables auto-wire web → server → db, and the server's
+`preDeployCommand` migrates the fresh DB. Use **Focused PR Environments** (set
+each service's watch paths, e.g. `apps/server/**` + `packages/**` for the server)
+so a change only rebuilds the services it touches. Environments tear down on
+merge/close.
+
+Mobile ships via EAS, not Railway.
