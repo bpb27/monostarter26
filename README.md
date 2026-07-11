@@ -11,10 +11,10 @@ A TypeScript monorepo: mobile app, user web app, admin web app, and an API serve
 | Mobile | Expo (SDK 57) + expo-router |
 | Web (user + admin) | React 19 + Vite SPA + React Router |
 | Frontend toolchain | Vite+ (`vp`) — scoped to lint/format/test/build |
-| Server | Hono on Node (Vercel Functions in prod) |
-| Database | Postgres (Supabase in prod) + Kysely |
+| Server | Hono on Node (long-running container on Railway) |
+| Database | Postgres (Railway) + Kysely |
 | Auth | Clerk |
-| Hosting | Vercel (web + server), EAS (mobile) |
+| Hosting | Railway (server + Postgres), EAS (mobile); web = Railway or a CDN |
 
 ## Layout
 
@@ -26,7 +26,8 @@ apps/
   server/      Hono API
 packages/
   tsconfig/    shared TS configs
-  shared/      shared types + zod env schema
+  shared/      shared, isomorphic types
+  env/         env manifest (per-app schemas) + getters + `env:sync` generator
   db/          Kysely client, migrations, seed
   auth/        Clerk role helpers
   api-client/  typed Hono RPC client (shared by all frontends)
@@ -39,6 +40,8 @@ See [docs/initial-setup.md](docs/initial-setup.md) for one-time manual setup
 
 ```bash
 pnpm install
+cp .env.example .env      # fill in Clerk keys, etc.
+pnpm env:sync             # fan the root .env out to per-app .env files
 docker compose up -d      # local Postgres
 pnpm db:migrate           # apply schema
 pnpm dev                  # run everything via turbo
@@ -55,6 +58,8 @@ pnpm dev                  # run everything via turbo
 | `pnpm test` | Run tests |
 | `pnpm db:migrate` | Apply DB migrations |
 | `pnpm db:codegen` | Regenerate Kysely types from the DB |
+| `pnpm env:sync` | Regenerate per-app `.env` from the root `.env` |
+| `pnpm env:example` | Regenerate committed `.env.example` files from the manifest |
 
 Target a single package with `--filter`, e.g. `pnpm --filter server dev`.
 
@@ -69,9 +74,19 @@ Target a single package with `--filter`, e.g. `pnpm --filter server dev`.
 
 ## Deployment
 
-- **Web apps + server**: three Vercel projects, each with its **Root Directory**
-  set to `apps/web-user`, `apps/web-admin`, or `apps/server`. Each ships a
-  `vercel.json` (SPA rewrites for the web apps; a catch-all to the Hono function
-  for the server).
+See [docs/initial-setup.md](docs/initial-setup.md#7-deploy-the-server-to-railway)
+for step-by-step Railway setup.
+
+- **Server**: a long-running container built from `apps/server/Dockerfile`
+  (multi-stage `node:26-alpine`; the build **bundles** the `@repo/*` workspace
+  packages so the runtime needs no TypeScript). Deployed on **Railway**;
+  config-as-code in `apps/server/railway.json` (Dockerfile builder + `/health`
+  healthcheck). Railway injects `PORT`; the app binds `0.0.0.0:$PORT`.
+- **Database**: **Railway Postgres**. Wire it to the server with
+  `DATABASE_URL = ${{Postgres.DATABASE_URL}}` (private network). SSL is enabled
+  only when the URL has `sslmode=require` or `DATABASE_SSL=true`.
+- **Web apps**: static SPAs served by **Caddy** containers on Railway
+  (`apps/web-*/Dockerfile` + `Caddyfile`, with SPA fallback to `index.html`).
+  `VITE_API_URL` uses the `${{server.RAILWAY_PUBLIC_DOMAIN}}` reference so each
+  environment points at its own server.
 - **Mobile**: EAS (`eas build` / `eas submit`) — see `apps/mobile/eas.json`.
-- **Database**: Supabase Postgres; set `DATABASE_URL` in each Vercel project.

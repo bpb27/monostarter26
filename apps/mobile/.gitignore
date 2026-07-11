@@ -7,7 +7,9 @@ node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# NOTE: expo-env.d.ts is intentionally committed (not ignored). It supplies the
+# ambient CSS / CSS-module + EXPO_PUBLIC_* declarations via `expo/types`, and CI
+# runs only `tsc` (never a build/`expo start`), so it must exist in the repo.
 
 # Native
 .kotlin/

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // Mock Clerk so tests exercise *our* auth guard, not Clerk's SDK/network.
 // getAuth returns null => an unauthenticated request.
-vi.mock("@hono/clerk-auth", () => ({
+vi.mock("@clerk/hono", () => ({
   clerkMiddleware:
     () =>
     (_c: unknown, next: () => Promise<void>): Promise<void> =>

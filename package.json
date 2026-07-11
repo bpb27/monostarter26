@@ -2,10 +2,6 @@
   "name": "monostarter26",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@11.10.0",
-  "engines": {
-    "node": ">=26"
-  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -14,10 +10,17 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "db:migrate": "pnpm --filter @repo/db db:migrate",
-    "db:codegen": "pnpm --filter @repo/db codegen"
+    "db:codegen": "pnpm --filter @repo/db codegen",
+    "env:sync": "pnpm --filter @repo/env sync",
+    "env:example": "pnpm --filter @repo/env sync:example"
   },
   "devDependencies": {
+    "eas-cli": "latest",
     "turbo": "latest",
     "typescript": "latest"
-  }
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "packageManager": "pnpm@11.10.0"
 }
