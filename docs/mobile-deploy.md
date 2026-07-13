@@ -155,6 +155,13 @@ The bundle id is already a real one (`io.github.bpb27.monostarter.mobile`), so:
    testers immediately (up to 100, no review). **External** testers (up to 10k)
    need a one-time Beta App Review.
 
+**Export compliance:** `app.json` sets `ios.config.usesNonExemptEncryption: false`
+(→ `ITSAppUsesNonExemptEncryption = false`). That's the correct declaration for
+this app — it only uses *exempt* encryption (HTTPS/TLS, Clerk auth, Keychain via
+`expo-secure-store`). It stops `eas submit` re-prompting each time. If you ever
+add custom/proprietary cryptography, revisit this — it becomes your declaration
+to make.
+
 For CI / repeatable submits, fill `eas.json`'s `submit.production.ios` with
 `ascAppId`, `appleTeamId`, and the API key (`ascApiKeyPath` / `ascApiKeyId` /
 `ascApiKeyIssuerId`). Left empty, `eas submit` just prompts interactively.
