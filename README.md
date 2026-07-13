@@ -89,4 +89,5 @@ for step-by-step Railway setup.
   (`apps/web-*/Dockerfile` + `Caddyfile`, with SPA fallback to `index.html`).
   `VITE_API_URL` uses the `${{server.RAILWAY_PUBLIC_DOMAIN}}` reference so each
   environment points at its own server.
-- **Mobile**: EAS (`eas build` / `eas submit`) — see `apps/mobile/eas.json`.
+- **Mobile**: EAS (`eas build` / `eas update`) — see
+  [docs/mobile-deploy.md](docs/mobile-deploy.md).

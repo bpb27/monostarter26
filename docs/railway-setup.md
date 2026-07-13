@@ -147,6 +147,7 @@ Railway often auto-creates a `mobile` service when you first link the repo —
 
 Mobile's deploy automation (an EAS job in CI) is intentionally separate from
 Railway; that pipeline is where mobile's graph-awareness lives, if you add it.
+See **[mobile-deploy.md](mobile-deploy.md)** for the EAS build + OTA setup.
 
 ## Preview environments
 
