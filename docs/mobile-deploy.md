@@ -12,9 +12,9 @@ server process to containerize). Two independent mechanisms:
 The rule of thumb: **native change → new build; JS-only change → OTA update.**
 `runtimeVersion` (below) is what enforces that boundary.
 
-This doc covers the current template scope: **internal builds + OTA**. Store
-submission (App Store / Play) is deliberately out of scope until you add paid
-developer accounts — see [Later: store submission](#later-store-submission).
+This doc covers the two ways to distribute: **internal builds + OTA** (no paid
+accounts), and **TestFlight / store submission** (needs paid developer accounts)
+— see [iOS: TestFlight & the App Store](#ios-testflight--the-app-store).
 
 ## What's already config-as-code
 
@@ -22,7 +22,7 @@ Committed in the repo — nothing to do in a dashboard for these:
 
 | File | Provides |
 | --- | --- |
-| [`apps/mobile/app.json`](../apps/mobile/app.json) | `ios.bundleIdentifier` + `android.package` (**placeholder `com.example.mobile` — change before any store submission**), plugins, typed routes |
+| [`apps/mobile/app.json`](../apps/mobile/app.json) | `ios.bundleIdentifier` + `android.package` = `io.github.bpb27.monostarter.mobile` (**if you fork this template, change this to your own namespace + re-run `eas init`**), plus `extra.eas.projectId`, `owner`, `updates.url`, `runtimeVersion`, plugins, typed routes |
 | [`apps/mobile/eas.json`](../apps/mobile/eas.json) | Build profiles (`development` / `preview` / `production`) and their EAS Update **channels** (`preview`, `production`) |
 | [`apps/mobile/metro.config.js`](../apps/mobile/metro.config.js) | pnpm-monorepo resolution — EAS Build packs the whole workspace from the repo root, so `@repo/*` resolves in the cloud build |
 
@@ -43,11 +43,13 @@ After these, `app.json` gains an `extra.eas.projectId`, an `owner`, an
 `updates.url` (`https://u.expo.dev/<projectId>`), and a `runtimeVersion` policy.
 Commit that — it's config-as-code from then on.
 
-> **runtimeVersion policy.** `eas update:configure` sets this. Prefer
-> `{"runtimeVersion": {"policy": "fingerprint"}}` for SDK 57 — it hashes the
-> native layer so an OTA update only reaches builds whose native code matches.
-> Change a native module / plugin / SDK and the fingerprint changes → EAS
-> correctly refuses to OTA it and you build instead.
+> **runtimeVersion policy.** `eas update:configure` defaults this to the
+> `appVersion` policy; **change it to `{"policy": "fingerprint"}`** (already done
+> in this repo's `app.json`). Fingerprint hashes the native layer so an OTA
+> update only reaches builds whose native code matches. Change a native module /
+> plugin / SDK and the fingerprint changes → EAS correctly refuses to OTA it and
+> you build instead. `appVersion` would happily push mismatched JS to an old
+> native build.
 
 ## Expo dashboard configuration (the non-code bits)
 
@@ -128,16 +130,41 @@ builds ← `preview` channel. An update only reaches builds whose
   changes → **new `eas build`** required; an OTA to old builds won't (and
   shouldn't) apply.
 
-## Later: store submission
+## iOS: TestFlight & the App Store
 
-When you're ready for the App Store / Play Store:
+TestFlight is iOS **store** distribution — the `internal`/ad-hoc path above does
+**not** reach it. Requires an **Apple Developer Program** membership ($99/yr).
+The bundle id is already a real one (`io.github.bpb27.monostarter.mobile`), so:
 
-1. **Change the placeholder bundle id** `com.example.mobile` in `app.json` to
-   your real reverse-domain — it's permanent once a store record exists.
-2. Add the accounts: Apple Developer ($99/yr), Google Play ($25 one-time).
-3. Fill `eas.json`'s `submit.production` (App Store Connect API key /
-   `appleTeamId` / `ascAppId`; Android service-account JSON) and run
-   `npx eas submit --profile production --platform ios|android`.
+1. **Build for store distribution** — the `production` profile has no
+   `distribution` key, so it defaults to `store` (correct for TestFlight):
+   ```bash
+   npx eas build --profile production --platform ios
+   ```
+   EAS prompts you to log into Apple; it then **registers the bundle id** on the
+   Developer portal and **auto-generates** the distribution certificate +
+   provisioning profile (stored on EAS). Nothing to pre-create on Apple's side.
+2. **Submit to TestFlight:**
+   ```bash
+   npx eas submit --profile production --platform ios
+   ```
+   On first run it can **create the App Store Connect app record** for you. Auth
+   is easiest with an **App Store Connect API key** (App Store Connect → Users
+   and Access → Integrations → generate a key).
+3. Apple processes the build (~minutes) → available to **internal** TestFlight
+   testers immediately (up to 100, no review). **External** testers (up to 10k)
+   need a one-time Beta App Review.
+
+For CI / repeatable submits, fill `eas.json`'s `submit.production.ios` with
+`ascAppId`, `appleTeamId`, and the API key (`ascApiKeyPath` / `ascApiKeyId` /
+`ascApiKeyIssuerId`). Left empty, `eas submit` just prompts interactively.
+
+## Android: Google Play
+
+Building an APK/AAB needs no account (see [Building](#building-internal-distribution)).
+**Publishing** to Google Play needs a one-time **$25** Play Console account, then
+a Google **service-account JSON** referenced from `submit.production.android`,
+and `npx eas submit --profile production --platform android`.
 
 ## CI (optional, later)
 

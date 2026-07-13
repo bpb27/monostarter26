@@ -9,10 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.example.mobile"
+      "bundleIdentifier": "io.github.bpb27.monostarter.mobile"
     },
     "android": {
-      "package": "com.example.mobile",
+      "package": "io.github.bpb27.monostarter.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -39,6 +39,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "debab7ff-4562-42b3-84c8-0ccc62a07de9"
+      }
+    },
+    "owner": "bpb27",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/debab7ff-4562-42b3-84c8-0ccc62a07de9"
     }
   }
 }
