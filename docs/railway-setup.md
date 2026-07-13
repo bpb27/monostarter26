@@ -150,12 +150,11 @@ Railway; that pipeline is where mobile's graph-awareness lives, if you add it.
 
 ## Preview environments
 
-Enable **PR Environments** in project settings. Each PR spins up an isolated copy
-of every service + a fresh Postgres; the reference variables auto-wire
-web → server → db, and the server's `preDeployCommand` migrates the fresh DB.
-Combined with the committed `watchPatterns` above (**Focused PR Environments**), a
-change only rebuilds the services it touches. Environments tear down on
-merge/close.
+Enable **PR Environments** (Focused/Isolated) to get a full-stack, throwaway copy
+of the stack per pull request — the reference variables auto-wire web → server →
+db, and the committed `watchPatterns` above scope which services rebuild. See
+**[railway-preview-envs.md](railway-preview-envs.md)** for the full flow, what
+auto-wires, and the first-preview checks.
 
 ## Troubleshooting
 
