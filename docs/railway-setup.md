@@ -5,9 +5,9 @@ and both web apps (**web-user** / **web-admin**, static SPAs served by Caddy),
 plus a managed **Postgres**. Mobile ships via EAS, not Railway.
 
 Build + deploy settings live in code — each service has an
-`apps/<name>/railway.json` (Dockerfile builder, healthcheck, and for the server a
-migrate `preDeployCommand`). But a handful of things **cannot** be set from the
-repo and must be done once per service in the Railway dashboard. Those are the
+`apps/<name>/railway.json` (Dockerfile builder, healthcheck, watch paths, and for
+the server a migrate `preDeployCommand`). But a handful of things **cannot** be
+set from the repo and must be done once per service in the Railway dashboard. Those are the
 focus of this doc; miss one and you get a green build that still serves a 404 or
 502. Every manual step below is marked **⚙️ dashboard**.
 
@@ -80,14 +80,82 @@ VITE_CLERK_PUBLISHABLE_KEY = pk_live_… (or pk_test_)
 VITE_API_URL               = https://${{server.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
+## Watch paths & the dependency graph
+
+Railway decides whether a push triggers a build for a service by matching the
+changed files against that service's **watch paths**. These are committed as
+`build.watchPatterns` in each `railway.json` (config-as-code — no dashboard
+step), and Railway's config file **overrides** the dashboard field.
+
+The critical thing to understand: **watch paths are pure glob matching with zero
+dependency-graph awareness.** Turbo knows that `server` depends on
+`@repo/db` → `@repo/shared`; Railway does not. So a watch path of only
+`apps/server/**` would *miss* a change to `packages/db` and ship a **stale
+server** (the running bundle inlines `@repo/*` via tsdown `noExternal`, so old
+package code stays live). Turbo's graph is build-time only — it never triggers a
+Railway deploy.
+
+Because Railway has no "ignored build step" hook (unlike Vercel), you can't plug
+in `turbo-ignore`. Watch paths are the only native lever, so we use the **coarse
+superset** — each service watches its own app dir plus *all* shared inputs:
+
+```jsonc
+// apps/server/railway.json
+"watchPatterns": [
+  "apps/server/**",
+  "packages/**",        // any workspace package — never miss a transitive dep
+  "pnpm-lock.yaml",     // dependency-version bumps touch ONLY the lockfile
+  "pnpm-workspace.yaml",
+  ".npmrc"
+]
+```
+
+This never ships stale code. The tradeoff is occasional over-building (a
+`packages/x` change only the web apps use still rebuilds the server), which for a
+few services is cheap and strictly safer than the alternative. A *precise*
+per-app closure (`server` → `packages/{auth,db,env,shared}/**`) minimizes builds
+but is brittle: add a dependency and forget to update the globs, and you silently
+ship stale code. For a template, correctness beats minimal builds — keep it
+coarse. If over-building ever becomes costly, move to a CI-driven approach that
+computes affected apps from the Turbo graph (`turbo-ignore` /
+`--filter=<app>...[HEAD^1]`) and triggers deploys via the `railway` CLI, with
+Railway's git auto-deploy turned off.
+
+> **Applying a `watchPatterns` change is chicken-and-egg.** The commit that
+> introduces or edits `watchPatterns` is only picked up if it matches the
+> *currently active* watch paths. Editing a file already inside the globs (e.g.
+> `apps/server/railway.json`) satisfies this. If a service ever gets stuck on old
+> patterns, trigger one manual **Redeploy** to adopt the new config.
+
+## Mobile: not a Railway service
+
+Mobile is an Expo/React Native app — there's no server process to containerize,
+so it **does not deploy on Railway**. It ships via **EAS** (`apps/mobile/eas.json`);
+JS/TS-only changes (including `@repo/{api-client,env,shared}`) go out as an **EAS
+Update** (OTA), while native changes need an **EAS Build** + submit.
+
+Railway often auto-creates a `mobile` service when you first link the repo —
+**delete it** (service → Settings → Danger → **Delete service**). Notes:
+
+- Deletion is **per-environment** ("remove it from *this* environment"); delete
+  it from `production` (and any other standing environment where it exists).
+- It **won't reappear** from normal deploys — a `git push` only deploys existing
+  services; Railway never provisions a new service per app folder. There is no
+  `apps/mobile/railway.json` and nothing in the repo references a mobile service.
+- New PR environments clone `production`, so once it's gone from prod, previews
+  won't include it either.
+
+Mobile's deploy automation (an EAS job in CI) is intentionally separate from
+Railway; that pipeline is where mobile's graph-awareness lives, if you add it.
+
 ## Preview environments
 
 Enable **PR Environments** in project settings. Each PR spins up an isolated copy
 of every service + a fresh Postgres; the reference variables auto-wire
-web → server → db, and the server's `preDeployCommand` migrates the fresh DB. Use
-**Focused PR Environments** (set each service's watch paths, e.g. `apps/server/**`
-+ `packages/**` for the server) so a change only rebuilds the services it
-touches. Environments tear down on merge/close.
+web → server → db, and the server's `preDeployCommand` migrates the fresh DB.
+Combined with the committed `watchPatterns` above (**Focused PR Environments**), a
+change only rebuilds the services it touches. Environments tear down on
+merge/close.
 
 ## Troubleshooting
 
