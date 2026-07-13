@@ -51,6 +51,16 @@ than hard-coded URLs:
 Because `VITE_*` is baked in at **build time**, and the web app is freshly built
 inside the preview env, its bundle points at the preview server — not production.
 
+> **These must be reference variables, not hardcoded URLs.** A literal like
+> `VITE_API_URL=https://server-production-….up.railway.app` works in production
+> but **silently breaks previews**: every preview web app would call the
+> *production* server + database (no isolation), and the production server's
+> `CORS_ORIGINS` wouldn't list the preview web domains, so those calls get
+> CORS-blocked. Use the `${{service.RAILWAY_PUBLIC_DOMAIN}}` form — it resolves
+> to the same URL in production and to the per-PR URL in a preview. Check the raw
+> value with `railway variable list -s web-user --kv` (or the dashboard, where a
+> reference renders as a `${{…}}` chip rather than a plain URL).
+
 ## Check these on your first preview
 
 Preview environments don't always inherit domain-level settings cleanly, and
