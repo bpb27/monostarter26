@@ -43,13 +43,25 @@ After these, `app.json` gains an `extra.eas.projectId`, an `owner`, an
 `updates.url` (`https://u.expo.dev/<projectId>`), and a `runtimeVersion` policy.
 Commit that — it's config-as-code from then on.
 
-> **runtimeVersion policy.** `eas update:configure` defaults this to the
-> `appVersion` policy; **change it to `{"policy": "fingerprint"}`** (already done
-> in this repo's `app.json`). Fingerprint hashes the native layer so an OTA
-> update only reaches builds whose native code matches. Change a native module /
-> plugin / SDK and the fingerprint changes → EAS correctly refuses to OTA it and
-> you build instead. `appVersion` would happily push mismatched JS to an old
-> native build.
+> **Keep eas-cli current (≥ 24.4.1).** `eas-cli` is a root devDep pinned to
+> `"latest"`, but the committed `pnpm-lock.yaml` freezes an actual version — a
+> fresh clone gets whatever the lock pins, which can be old. Versions 23.2.0–
+> 24.3.0 have an Apple-auth bug that breaks iOS builds (see
+> [Troubleshooting](#troubleshooting)). Bump it from the repo root before an iOS
+> build: `pnpm add -w -D eas-cli@latest`, then confirm `npx eas-cli --version`.
+
+> **runtimeVersion policy = `appVersion`.** This repo uses the `appVersion`
+> policy (runtime version = the app `version`, e.g. `1.0.0`), which is computed
+> identically on your machine and on EAS. We tried `fingerprint` (which hashes
+> the native layer, auto-scoping OTA compatibility) but it **fails on this
+> managed-workflow monorepo**: EAS generates the native `ios/` project and
+> injects `expo-eas-client` at build time, so its fingerprint never matches the
+> one computed locally → `Runtime version mismatch` and a failed build (see
+> [Troubleshooting](#troubleshooting)). The `appVersion` tradeoff: **when you
+> make a native change** (add a native module, bump the SDK, change a config
+> plugin), **bump `version` in `app.json` and cut a new build** — otherwise an
+> OTA could reach a build with mismatched native code. `sdkVersion` is a
+> middle-ground alternative that's also deterministic.
 
 ## Expo dashboard configuration (the non-code bits)
 
@@ -126,9 +138,11 @@ builds ← `preview` channel. An update only reaches builds whose
 **`runtimeVersion` matches** — so:
 
 - **JS/TS, assets, `@repo/*` TS** → `eas update` (OTA, seconds).
-- **New native module, config-plugin change, Expo SDK bump** → `runtimeVersion`
-  changes → **new `eas build`** required; an OTA to old builds won't (and
-  shouldn't) apply.
+- **New native module, config-plugin change, Expo SDK bump** → **bump `version`
+  in `app.json` and cut a new `eas build`.** With the `appVersion` policy the
+  runtime version doesn't change on its own, so bumping `version` is what keeps
+  an incompatible OTA from reaching an old native build. (This manual step is the
+  price of `appVersion`'s determinism — see the runtimeVersion note above.)
 
 ## iOS: TestFlight & the App Store
 
@@ -141,9 +155,11 @@ The bundle id is already a real one (`io.github.bpb27.monostarter.mobile`), so:
    ```bash
    npx eas build --profile production --platform ios
    ```
-   EAS prompts you to log into Apple; it then **registers the bundle id** on the
-   Developer portal and **auto-generates** the distribution certificate +
-   provisioning profile (stored on EAS). Nothing to pre-create on Apple's side.
+   EAS prompts you to log into Apple (full email + a 2FA code), then generates
+   the distribution certificate + provisioning profile and stores them on EAS.
+   It normally auto-registers the bundle id (App ID) too, but that step can fail
+   with `Failed to find Bundle ID item…` — if so, register it manually (see
+   [Troubleshooting](#troubleshooting)) and re-run.
 2. **Submit to TestFlight:**
    ```bash
    npx eas submit --profile production --platform ios
@@ -172,6 +188,20 @@ Building an APK/AAB needs no account (see [Building](#building-internal-distribu
 **Publishing** to Google Play needs a one-time **$25** Play Console account, then
 a Google **service-account JSON** referenced from `submit.production.android`,
 and `npx eas submit --profile production --platform android`.
+
+## Troubleshooting
+
+The first iOS build against a fresh Apple account is where the friction lives.
+Match the symptom (these are all things we actually hit):
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `iTunes service key is empty` during Apple login (build fails before the 2FA prompt) | Auth bug in `@expo/apple-utils` shipped in **eas-cli 23.2.0–24.3.0**. The committed `pnpm-lock.yaml` can pin an affected (or older) version even though `package.json` says `"latest"`. | Upgrade past **24.4.1**: from the repo root, `pnpm add -w -D eas-cli@latest`; confirm `npx eas-cli --version`; retry. Getting to a **2FA prompt** = fixed. ([expo/eas-cli#4392](https://github.com/expo/eas-cli/issues/4392)) |
+| `Authentication with Apple Developer Portal failed!` right after entering the Apple ID | Apple ID entered as a **handle, not the full email** — or a stale password cached in the macOS **Keychain** from a prior failed attempt (EAS reuses it silently and never reaches 2FA). | Use the full `you@example.com`. If it says *"Using password … from your local Keychain"* and still fails, open **Keychain Access**, delete the `idmsa.apple.com` / Apple ID entry, and re-run so it re-prompts. |
+| `Failed to find Bundle ID item with identifier "…"` when creating the provisioning profile | The App ID isn't registered on the Developer Portal yet — EAS's auto-registration didn't land. | Re-run `eas build` first (often registers on the retry). If it persists, register manually: [developer.apple.com](https://developer.apple.com/account) → **Identifiers** → **＋** → **App IDs** → **App** → **Explicit** → `io.github.bpb27.monostarter.mobile` → **Register**, then re-run. |
+| `Generate a new Apple Distribution Certificate?` / `…Provisioning Profile?` | First build on a fresh account has none. | Answer **yes** — EAS creates, stores, and **reuses** them. Apple caps distribution certs per account, so let EAS manage the one; don't hand-create extras. |
+| `eas submit` keeps asking for Apple credentials / 2FA every time | No non-interactive auth configured. | Set up an **App Store Connect API key**: `npx eas credentials --platform ios` → *App Store Connect API Key* → point at the `.p8` (Key ID + Issuer ID from App Store Connect → **Users and Access → Integrations**). **Apple lets you download a `.p8` only once — back it up.** A `Unable to validate … not authenticated with Apple` note when you add it is non-fatal; it validates on first real use. |
+| Build fails in the **Configure expo-updates** phase with `Runtime version mismatch: … local machine … not equal to … during build` | The `fingerprint` runtimeVersion policy hashes different inputs locally vs. on EAS — on a managed-workflow monorepo, EAS generates the native `ios/` dir and injects `expo-eas-client`, so the fingerprints never agree. | Use the **`appVersion`** policy (what this repo now does) — `app.json` → `"runtimeVersion": {"policy": "appVersion"}`. Deterministic on both sides, no fingerprint to mismatch. (`sdkVersion` also works.) See the [runtimeVersion note](#one-time-setup-you--needs-your-expo-login). |
 
 ## CI (optional, later)
 

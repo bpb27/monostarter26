@@ -54,7 +54,7 @@
     },
     "owner": "bpb27",
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/debab7ff-4562-42b3-84c8-0ccc62a07de9"
