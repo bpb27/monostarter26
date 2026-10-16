@@ -129,4 +129,5 @@ See **[docs/railway-setup.md](railway-setup.md)** for the full per-service
 checklist, the variables to set, preview-environment setup, and a
 troubleshooting table keyed to specific symptoms.
 
-Mobile ships via EAS, not Railway.
+Mobile ships via EAS, not Railway — see
+**[docs/mobile-deploy.md](mobile-deploy.md)** for build + OTA setup.

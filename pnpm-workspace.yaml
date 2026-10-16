@@ -13,5 +13,6 @@ allowBuilds:
   core-js: true
   dtrace-provider: false
   esbuild: true
+  protobufjs: false
   unrs-resolver: true
   utf-8-validate: true
